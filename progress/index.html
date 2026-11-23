@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>robottoy.ai progress</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--pink:#D6336C;--ink:#3A0A22;--soft:#FFD6E4;--bg:#FFF7FA;--card:#ffffff;--mute:#7a5868;--line:#f3cfdc}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Fredoka,system-ui,sans-serif;font-size:18px;line-height:1.5}
+.wrap{max-width:920px;margin:0 auto;padding:32px 16px 80px}
+.mark{font-weight:600;font-size:26px;letter-spacing:.2px}.mark b{color:var(--pink);font-weight:600}
+h1{font-size:clamp(30px,6vw,46px);line-height:1.12;margin:18px 0 10px;font-weight:600;text-wrap:balance}
+h2{font-family:Caveat,cursive;font-size:34px;color:var(--pink);margin:44px 0 8px;font-weight:600}
+p{margin:8px 0;max-width:62ch}
+.lock{max-width:440px;margin:12vh auto 0;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px}
+.lock label{display:block;font-weight:500;margin:14px 0 6px}
+.lock input{width:100%;font:inherit;padding:12px 14px;border:2px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
+.lock input:focus{outline:none;border-color:var(--pink)}
+button{font:inherit;font-weight:500;background:var(--pink);color:#fff;border:0;border-radius:999px;padding:11px 22px;cursor:pointer}
+button:disabled{opacity:.6;cursor:default}
+button.ghost{background:#fff;color:var(--pink);border:2px solid var(--pink)}
+.msg{min-height:1.5em;color:var(--pink);margin-top:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px 22px;margin:14px 0}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.vid{position:relative;border-radius:18px;overflow:hidden;background:var(--ink);aspect-ratio:16/9;display:grid;place-items:center}
+.vid img,.vid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.vid video{object-fit:contain;background:#000}
+.vid button{position:relative;z-index:1}
+.cap{font-size:16px;color:var(--mute);margin-top:8px}
+.tl{list-style:none;padding:0;margin:8px 0}
+.tl li{display:grid;grid-template-columns:92px 1fr;gap:14px;padding:12px 0;border-top:1px solid var(--line)}
+.tl li:first-child{border-top:0}
+.tl time{font-weight:600;color:var(--pink)}
+.frame{width:100%;height:min(78vh,720px);border:1px solid var(--line);border-radius:18px;background:#191816;display:block}
+.hold{border:2px dashed var(--line);border-radius:18px;padding:36px 16px;text-align:center}
+.pics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.pics figure{margin:0;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.pics figure.wide{grid-column:1/-1}
+.pics img{display:block;width:100%;height:auto;max-height:560px;object-fit:cover}
+.pics figcaption{padding:10px 14px;font-size:16px;color:var(--mute)}
+@media (max-width:520px){.pics{grid-template-columns:1fr}}
+.stat{font-size:34px;font-weight:600;color:var(--pink);line-height:1.1}
+small{color:var(--mute)}
+@media (max-width:520px){.tl li{grid-template-columns:1fr;gap:2px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mark"><b>robot</b>toy.ai</div>
+  <div id="app">
+    <form class="lock" id="lock">
+      <h1 style="font-size:28px;margin-top:0">Progress</h1>
+      <p>This page is shared with a password.</p>
+      <label for="pw">Password</label>
+      <input id="pw" type="password" autocomplete="current-password" required>
+      <p style="margin-top:16px"><button id="go" type="submit">Open</button></p>
+      <p class="msg" id="msg" role="status"></p>
+    </form>
+  </div>
+</div>
+<script>
+const SALT = Uint8Array.from(atob('k+oT3D4OGOnVjwldsY++VA=='), c => c.charCodeAt(0)), ITER = 600000; let key = null;
+async function makeKey(pw) { const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name: 'PBKDF2', salt: SALT, iterations: ITER, hash: 'SHA-256'}, k, {name: 'AES-GCM', length: 256}, false, ['decrypt']); }
+async function unseal(name, k) { const r = await fetch(name, {cache: 'no-store'}); if (!r.ok) throw new Error('missing ' + name); const b = new Uint8Array(await r.arrayBuffer());
+  return crypto.subtle.decrypt({name: 'AES-GCM', iv: b.slice(0, 12)}, k || key, b.slice(12)); }
+document.getElementById('lock').addEventListener('submit', async e => { e.preventDefault(); const go = document.getElementById('go'), msg = document.getElementById('msg'); go.disabled = true; msg.textContent = 'Opening';
+  try { const k = await makeKey(document.getElementById('pw').value); const html = new TextDecoder().decode(await unseal('main.bin', k)); key = k; document.getElementById('app').innerHTML = html; wire(); scrollTo(0, 0); }
+  catch (err) { msg.textContent = err.name === 'OperationError' ? 'That password does not match.' : 'The page could not be opened. Please try again.'; go.disabled = false; } });
+function wire() {
+  document.querySelectorAll('[data-video]').forEach(box => box.querySelector('button').addEventListener('click', async ev => { const b = ev.currentTarget; b.disabled = true; b.textContent = 'Loading';
+    try { const url = URL.createObjectURL(new Blob([await unseal(box.dataset.video)], {type: 'video/mp4'})); const v = document.createElement('video'); v.controls = true; v.playsInline = true; v.src = url; box.replaceChildren(v); v.play().catch(() => {}); }
+    catch (err) { b.disabled = false; b.textContent = 'Try again'; } }));
+  document.querySelectorAll('[data-view]').forEach(box => box.querySelector('button').addEventListener('click', async ev => { const b = ev.currentTarget; b.disabled = true; b.textContent = 'Loading';
+    try { const url = URL.createObjectURL(new Blob([await unseal(box.dataset.view)], {type: 'text/html'})); const f = document.createElement('iframe'); f.className = 'frame'; f.title = box.dataset.title; f.src = url + (box.dataset.hash || ''); box.replaceWith(f); }
+    catch (err) { b.disabled = false; b.textContent = 'Try again'; } }));
+}
+</script>
+</body>
+</html>
